@@ -4,6 +4,7 @@ var bodyParser = require('body-parser');
 var WebSocket = require("ws");
 
 var block = require("./block");
+var tx = require("./transaction");
 
 var http_port = process.env.HTTP_PORT || 3001;
 var p2p_port = process.env.P2P_PORT || 6001;
@@ -13,7 +14,8 @@ var sockets = [];
 var MessageType = {
     QUERY_LATEST: 0,
     QUERY_ALL: 1,
-    RESPONSE_BLOCKCHAIN: 2
+    RESPONSE_BLOCKCHAIN: 2,
+    RESPONSE_TRANSACTION: 3
 };
 
 var initHttpServer = () => {
@@ -36,6 +38,16 @@ var initHttpServer = () => {
     });
     app.post('/addPeer', (req, res) => {
         connectToPeers([req.body.peer]);
+        res.send();
+    });
+    app.post('/transact', (req, res) => {
+        var newTx = tx.createTransaction(req.body);
+        try {
+            tx.addTransactionToPool(newTx);
+            broadcast(responseTxMsg(newTx));
+        } catch (e) {
+            console.log(e);
+        }
         res.send();
     });
     app.listen(http_port, () => console.log('Listening http on port: ' + http_port));
@@ -67,6 +79,9 @@ var initMessageHandler = (ws) => {
                 break;
             case MessageType.RESPONSE_BLOCKCHAIN:
                 handleBlockchainResponse(message);
+                break;
+            case MessageType.RESPONSE_TRANSACTION:
+                handleTransactionResponse(message);
                 break;
         }
     });
@@ -122,6 +137,20 @@ var handleBlockchainResponse = (message) => {
     }
 };
 
+var handleTransactionResponse = (message) => {
+    var receivedTx = tx.createTransaction(JSON.parse(message.data));
+    if (!tx.hasTransactionInPool(receivedTx)) {
+        try {
+            tx.addTransactionToPool(receivedTx);
+            broadcast(responseTxMsg(receivedTx));
+        } catch (e) {
+            console.log(e);
+        }
+    } else {
+        console.log('Received transaction is already in pool. Do nothing');
+    }
+};
+
 var queryChainLengthMsg = () => ({
     'type': MessageType.QUERY_LATEST
 });
@@ -135,6 +164,10 @@ var responseLatestMsg = () => ({
 var responseChainMsg = () =>({
     'type': MessageType.RESPONSE_BLOCKCHAIN,
     'data': JSON.stringify(block.getBlocks())
+});
+var responseTxMsg = (tx) => ({
+    'type': MessageType.RESPONSE_TRANSACTION,
+    'data': JSON.stringify(tx)
 });
 
 var write = (ws, message) => ws.send(JSON.stringify(message));
