@@ -95,4 +95,5 @@ var isValidChain = (blockchainToValidate) => {
 var getLatestBlock = () => blockchain[blockchain.length - 1];
 var getBlocks = () => blockchain;
 
-module.exports = {addBlock, replaceChain, getLatestBlock, getBlocks, generateNextBlock, calculateHashForBlock};
+module.exports = {addBlock, replaceChain, getLatestBlock, getBlocks,
+    generateNextBlock, calculateHashForBlock};

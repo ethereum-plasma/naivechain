@@ -156,4 +156,5 @@ var collectTransactions = () => {
     return txs;
 };
 
-module.exports = {createTransaction, addTransactionToPool, hasTransactionInPool, collectTransactions, isValidBlockContent};
+module.exports = {createTransaction, addTransactionToPool, hasTransactionInPool,
+    collectTransactions, isValidBlockContent};
