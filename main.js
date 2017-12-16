@@ -24,7 +24,7 @@ var initHttpServer = () => {
 
     app.get('/blocks', (req, res) => res.send(JSON.stringify(block.getBlocks())));
     app.post('/mineBlock', (req, res) => {
-        var newBlock = block.generateNextBlock(req.body.data);
+        var newBlock = block.generateNextBlock(req.body.sig);
         try {
             block.addBlock(newBlock);
             broadcast(responseLatestMsg());
@@ -110,9 +110,11 @@ var handleBlockchainResponse = (message) => {
     var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.index - b2.index));
     var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
     var latestBlockHeld = block.getLatestBlock();
-    if (latestBlockReceived.index > latestBlockHeld.index) {
-        console.log('Blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
-        if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
+    if (latestBlockReceived.blockHeader.blockNumber > latestBlockHeld.blockHeader.blockNumber) {
+        console.log('Blockchain possibly behind. We got: ' +
+        latestBlockHeld.blockHeader.blockNumber + ' Peer got: ' +
+        latestBlockReceived.blockHeader.blockNumber);
+        if (block.calculateHashForBlock(latestBlockHeld) === latestBlockReceived.blockHeader.previousHash) {
             console.log("We can append the received block to our chain");
             try {
                 block.addBlock(latestBlockReceived);

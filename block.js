@@ -2,36 +2,47 @@
 
 var CryptoJS = require("crypto-js");
 
+var tx = require("./transaction");
+var Merkle = require("./merkle");
+
 class Block {
-    constructor(index, previousHash, timestamp, data, hash) {
-        this.index = index;
-        this.previousHash = previousHash.toString();
-        this.timestamp = timestamp;
-        this.data = data;
-        this.hash = hash.toString();
+    constructor(blockNumber, previousHash, sig, transactions) {
+        var data = [];
+        transactions.forEach(tx => data.push(tx));
+
+        this.blockHeader = new BlockHeader(blockNumber, previousHash, data, sig);
+        this.transactions = transactions;
+    }
+}
+
+class BlockHeader {
+    constructor(blockNumber, previousHash, data, sig) {
+        this.blockNumber = blockNumber;
+        this.previousHash = previousHash;
+        this.merkleRoot = new Merkle(data).computeRootHash();
+        this.sig = sig;
     }
 }
 
 var getGenesisBlock = () => {
-    return new Block(0, "0", 1465154705, "my genesis block!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7");
+    return new Block(0, "0", "sig1", []);
+};
+
+var calculateHashForBlock = (block) => {
+    var blkHeader = block.blockHeader;
+    var data = blkHeader.blockNumber + blkHeader.previousHash + blkHeader.merkleRoot + blkHeader.sig;
+    block.transactions.forEach(tx => data += tx);
+    return CryptoJS.SHA256(data).toString();
 };
 
 var blockchain = [getGenesisBlock()];
 
-var generateNextBlock = (blockData) => {
+var generateNextBlock = (sig) => {
     var previousBlock = getLatestBlock();
-    var nextIndex = previousBlock.index + 1;
-    var nextTimestamp = new Date().getTime() / 1000;
-    var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData);
-    return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash);
-};
-
-var calculateHashForBlock = (block) => {
-    return calculateHash(block.index, block.previousHash, block.timestamp, block.data);
-};
-
-var calculateHash = (index, previousHash, timestamp, data) => {
-    return CryptoJS.SHA256(index + previousHash + timestamp + data).toString();
+    var previousHash = calculateHashForBlock(previousBlock);
+    var nextIndex = previousBlock.blockHeader.blockNumber + 1;
+    var transactions = tx.collectTransactions();
+    return new Block(nextIndex, previousHash, sig, transactions);
 };
 
 var addBlock = (newBlock) => {
@@ -44,15 +55,14 @@ var addBlock = (newBlock) => {
 };
 
 var isValidNewBlock = (newBlock, previousBlock) => {
-    if (previousBlock.index + 1 !== newBlock.index) {
-        console.log('invalid index');
+    if (previousBlock.blockHeader.blockNumber + 1 !== newBlock.blockHeader.blockNumber) {
+        console.log('invalid block number');
         return false;
-    } else if (previousBlock.hash !== newBlock.previousHash) {
-        console.log('invalid previoushash');
+    } else if (calculateHashForBlock(previousBlock) !== newBlock.blockHeader.previousHash) {
+        console.log('invalid previous hash');
         return false;
-    } else if (calculateHashForBlock(newBlock) !== newBlock.hash) {
-        console.log(typeof (newBlock.hash) + ' ' + typeof calculateHashForBlock(newBlock));
-        console.log('invalid hash: ' + calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
+    } else if (!tx.isValidBlockContent(newBlock)) {
+        console.log('invalid block content');
         return false;
     }
     return true;
@@ -85,4 +95,4 @@ var isValidChain = (blockchainToValidate) => {
 var getLatestBlock = () => blockchain[blockchain.length - 1];
 var getBlocks = () => blockchain;
 
-module.exports = {addBlock, replaceChain, getLatestBlock, getBlocks, generateNextBlock};
+module.exports = {addBlock, replaceChain, getLatestBlock, getBlocks, generateNextBlock, calculateHashForBlock};
