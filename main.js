@@ -23,10 +23,9 @@ var initHttpServer = () => {
     app.use(bodyParser.json());
 
     app.get('/blocks', (req, res) => res.send(JSON.stringify(block.getBlocks())));
-    app.post('/mineBlock', (req, res) => {
-        var newBlock = block.generateNextBlock(req.body.sig);
+    app.post('/mineBlock', async (req, res) => {
         try {
-            block.addBlock(newBlock);
+            await block.generateNextBlock();
             broadcast(responseLatestMsg());
         } catch (e) {
             console.log(e);
@@ -107,7 +106,7 @@ var connectToPeers = (newPeers) => {
 };
 
 var handleBlockchainResponse = (message) => {
-    var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.index - b2.index));
+    var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.blockHeader.blockNumber - b2.blockHeader.blockNumber));
     var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
     var latestBlockHeld = block.getLatestBlock();
     if (latestBlockReceived.blockHeader.blockNumber > latestBlockHeld.blockHeader.blockNumber) {

@@ -1,48 +1,82 @@
 'use strict';
 
 var CryptoJS = require("crypto-js");
+var stripHexPrefix = require('strip-hex-prefix');
 
 var tx = require("./transaction");
+var geth = require("./geth");
+
 var Merkle = require("./merkle");
 
 class Block {
-    constructor(blockNumber, previousHash, sig, transactions) {
+    constructor(blockNumber, previousHash, transactions) {
         var data = [];
         transactions.forEach(tx => data.push(tx));
 
-        this.blockHeader = new BlockHeader(blockNumber, previousHash, data, sig);
+        this.blockHeader = new BlockHeader(blockNumber, previousHash, data);
         this.transactions = transactions;
     }
 }
 
 class BlockHeader {
-    constructor(blockNumber, previousHash, data, sig) {
-        this.blockNumber = blockNumber;
-        this.previousHash = previousHash;
-        this.merkleRoot = new Merkle(data).computeRootHash();
-        this.sig = sig;
+    constructor(blockNumber, previousHash, data) {
+        this.blockNumber = blockNumber;  // 4 bytes
+        this.previousHash = previousHash;  // 32 bytes
+        this.merkleRoot = new Merkle(data).computeRootHash();  // 32 bytes
+        this.sigR = "";  // 32 bytes
+        this.sigS = "";  // 32 bytes
+        this.sigV = "";  // 1 byte
+    }
+
+    setSignature(signature) {
+        var sig = stripHexPrefix(signature);
+        var sigR = sig.substring(0, 64);
+        var sigS = sig.substring(64, 128);
+        var sigV = parseInt(sig.substring(128, 130), 16);
+        if (sigV < 27) {
+            sigV += 27;
+        }
+        this.sigR = sigR;
+        this.sigS = sigS;
+        this.sigV = sigV.toString(16).padStart(2, "0");
     }
 }
 
 var getGenesisBlock = () => {
-    return new Block(0, "0", "sig1", []);
-};
-
-var calculateHashForBlock = (block) => {
-    var blkHeader = block.blockHeader;
-    var data = blkHeader.blockNumber + blkHeader.previousHash + blkHeader.merkleRoot + blkHeader.sig;
-    block.transactions.forEach(tx => data += tx);
-    return CryptoJS.SHA256(data).toString();
+    return new Block(0, "0", []);
 };
 
 var blockchain = [getGenesisBlock()];
 
-var generateNextBlock = (sig) => {
+var getRawBlockHeader = (header, includingSig) => {
+    var blkNumHexString = header.blockNumber.toString(16).padStart(8, "0");
+    var rawBlockHeader = blkNumHexString + header.previousHash + header.merkleRoot;
+    if (includingSig) {
+        rawBlockHeader += header.sigR + header.sigS + header.sigV;
+    }
+    return rawBlockHeader;
+}
+
+var calculateHashForBlock = (block) => {
+    return CryptoJS.SHA256(getRawBlockHeader(block.blockHeader, true)).toString();
+};
+
+var generateNextBlock = async () => {
     var previousBlock = getLatestBlock();
     var previousHash = calculateHashForBlock(previousBlock);
     var nextIndex = previousBlock.blockHeader.blockNumber + 1;
     var transactions = tx.collectTransactions();
-    return new Block(nextIndex, previousHash, sig, transactions);
+    var rawBlock = new Block(nextIndex, previousHash, transactions);
+    var messageToSign = '0x' + getRawBlockHeader(rawBlock.blockHeader, false);
+    try {
+        var signature = await geth.signBlock(messageToSign);
+        rawBlock.blockHeader.setSignature(signature);
+        var hexPrefixHeader = '0x' + getRawBlockHeader(rawBlock.blockHeader, true);
+        geth.submitBlockHeader(hexPrefixHeader);
+        addBlock(rawBlock);
+    } catch (e) {
+        throw e;
+    }
 };
 
 var addBlock = (newBlock) => {
