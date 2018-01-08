@@ -20,14 +20,22 @@ contract PlasmaChainManager {
         uint8 v;
     }
 
+    struct DepositRecord {
+        uint32 n;
+        uint32 ctr;
+    }
+
     address public owner;
     uint32 public lastBlockNumber;
+    uint32 public depositCounter;
     mapping(address => bool) public operators;
     mapping(uint256 => BlockHeader) public headers;
+    mapping(address => DepositRecord[]) public depositRecords;
 
     function PlasmaChainManager() public {
         owner = msg.sender;
         lastBlockNumber = 0;
+        depositCounter = 64;
     }
 
     function extract32(bytes data, uint pos) pure internal returns (bytes32 result) {
@@ -54,8 +62,7 @@ contract PlasmaChainManager {
         return true;
     }
 
-    event HeaderSubmittedEvent(address indexed _signer,
-        uint32 indexed _blockNumber, bytes32 indexed _blockHash);
+    event HeaderSubmittedEvent(address signer, uint32 blockNumber);
 
     function submitBlockHeader(bytes header) public returns (bool success) {
         require(operators[msg.sender]);
@@ -89,8 +96,26 @@ contract PlasmaChainManager {
             v: sigV
         });
         headers[blockNumber] = newHeader;
+
+        // Increment the block number by 1 and reset the deposit counter.
         lastBlockNumber += 1;
-        HeaderSubmittedEvent(signer, blockNumber, blockHash);
+        depositCounter = 64;
+        HeaderSubmittedEvent(signer, blockNumber);
+        return true;
+    }
+
+    event DepositEvent(address from, uint256 amount, uint32 indexed n, uint32 ctr);
+
+    function deposit() payable public returns (bool success) {
+        require(msg.value == 1 ether);
+
+        DepositRecord memory newDeposit = DepositRecord({
+            n: lastBlockNumber,
+            ctr: depositCounter
+        });
+        depositRecords[msg.sender].push(newDeposit);
+        depositCounter += 1;
+        DepositEvent(msg.sender, msg.value, newDeposit.n, newDeposit.ctr);
         return true;
     }
 }

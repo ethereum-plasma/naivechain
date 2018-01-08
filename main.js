@@ -5,6 +5,7 @@ var WebSocket = require("ws");
 
 var block = require("./block");
 var tx = require("./transaction");
+var geth = require("./geth");
 
 var http_port = process.env.HTTP_PORT || 3001;
 var p2p_port = process.env.P2P_PORT || 6001;
@@ -22,7 +23,10 @@ var initHttpServer = () => {
     var app = express();
     app.use(bodyParser.json());
 
-    app.get('/blocks', (req, res) => res.send(JSON.stringify(block.getBlocks())));
+    // Block related
+    app.get('/blocks', (req, res) => {
+        res.send(JSON.stringify(block.getBlocks()));
+    });
     app.post('/mineBlock', async (req, res) => {
         try {
             await block.generateNextBlock();
@@ -32,6 +36,8 @@ var initHttpServer = () => {
         }
         res.send();
     });
+
+    // Peer related
     app.get('/peers', (req, res) => {
         res.send(sockets.map(s => s._socket.remoteAddress + ':' + s._socket.remotePort));
     });
@@ -39,23 +45,55 @@ var initHttpServer = () => {
         connectToPeers([req.body.peer]);
         res.send();
     });
-    app.post('/transact', (req, res) => {
-        var newTx = tx.createTransaction(req.body);
+
+    // Transaction related
+    app.post('/transaction/create', (req, res) => {
+        var rawTx = tx.createRawTransaction(req.body);
+        console.log('New transaction created: ' + JSON.stringify(rawTx));
+        res.send(rawTx.toString());
+    });
+    app.post('/transaction/sign', async (req, res) => {
         try {
-            tx.addTransactionToPool(newTx);
-            broadcast(responseTxMsg(newTx));
+            var signedTx = await tx.signRawTransaction(req.body);
+            console.log('Transaction signed: ' + JSON.stringify(signedTx));
+            res.send(signedTx.toString());
         } catch (e) {
             console.log(e);
+            res.send(e);
         }
+    });
+    app.post('/transaction/send', async (req, res) => {
+        try {
+            var newTx = await tx.sendRawTransaction(req.body.rawTx);
+            console.log('New Transaction added: ' + JSON.stringify(newTx));
+            broadcast(responseTxMsg(newTx));
+            res.send(newTx.toString());
+        } catch (e) {
+            console.log(e);
+            res.send(e);
+        }
+    });
+
+    app.post('/deposit', (req, res) => {
+        geth.deposit(req.body.address);
         res.send();
     });
+
+    // Debug function
+    app.get('/utxo', (req, res) => {
+        res.send(tx.getUTXO());
+    });
+    app.get('/pool', (req, res) => {
+        res.send(tx.getPool());
+    });
+
     app.listen(http_port, () => console.log('Listening http on port: ' + http_port));
 };
 
 var initP2PServer = () => {
     var server = new WebSocket.Server({port: p2p_port});
     server.on('connection', ws => initConnection(ws));
-    console.log('listening websocket p2p port on: ' + p2p_port);
+    console.log('Listening websocket p2p port on: ' + p2p_port);
 };
 
 var initConnection = (ws) => {
@@ -105,7 +143,7 @@ var connectToPeers = (newPeers) => {
     });
 };
 
-var handleBlockchainResponse = (message) => {
+var handleBlockchainResponse = async (message) => {
     var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.blockHeader.blockNumber - b2.blockHeader.blockNumber));
     var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
     var latestBlockHeld = block.getLatestBlock();
@@ -114,41 +152,36 @@ var handleBlockchainResponse = (message) => {
         latestBlockHeld.blockHeader.blockNumber + ' Peer got: ' +
         latestBlockReceived.blockHeader.blockNumber);
         if (block.calculateHashForBlock(latestBlockHeld) === latestBlockReceived.blockHeader.previousHash) {
-            console.log("We can append the received block to our chain");
             try {
                 block.addBlock(latestBlockReceived);
+                console.log('We can append the received block to our chain.');
                 broadcast(responseLatestMsg());
             } catch (e) {
                 console.log(e);
             }
         } else if (receivedBlocks.length === 1) {
-            console.log("We have to query the chain from our peer");
+            console.log('We have to query the chain from our peer.');
             broadcast(queryAllMsg());
         } else {
-            console.log("Received blockchain is longer than current blockchain");
+            console.log('Received blockchain is longer than current blockchain.');
             try {
-                block.replaceChain(receivedBlocks);
+                await block.replaceChain(receivedBlocks);
                 broadcast(responseLatestMsg());
             } catch (e) {
                 console.log(e);
             }
         }
     } else {
-        console.log('Received blockchain is not longer than received blockchain. Do nothing');
+        console.log('Received blockchain is not longer than received blockchain. Do nothing.');
     }
 };
 
-var handleTransactionResponse = (message) => {
-    var receivedTx = tx.createTransaction(JSON.parse(message.data));
-    if (!tx.hasTransactionInPool(receivedTx)) {
-        try {
-            tx.addTransactionToPool(receivedTx);
-            broadcast(responseTxMsg(receivedTx));
-        } catch (e) {
-            console.log(e);
-        }
-    } else {
-        console.log('Received transaction is already in pool. Do nothing');
+var handleTransactionResponse = async (message) => {
+    try {
+        var receivedTx = await tx.sendRawTransaction(message.data);
+        broadcast(responseTxMsg(receivedTx));
+    } catch (e) {
+        console.log(e);
     }
 };
 
@@ -168,7 +201,7 @@ var responseChainMsg = () =>({
 });
 var responseTxMsg = (tx) => ({
     'type': MessageType.RESPONSE_TRANSACTION,
-    'data': JSON.stringify(tx)
+    'data': tx.toString()
 });
 
 var write = (ws, message) => ws.send(JSON.stringify(message));
