@@ -4,7 +4,7 @@ var CryptoJS = require("crypto-js");
 
 class Merkle {
     constructor(data) {
-        this.data = data;
+        this.data = data.map(str => CryptoJS.SHA256(str).toString());
     }
 
     computeRootHash() {
