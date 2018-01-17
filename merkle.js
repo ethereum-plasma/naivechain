@@ -1,27 +1,55 @@
 'use strict';
 
-var CryptoJS = require("crypto-js");
+var crypto = require('crypto');
 
 class Merkle {
     constructor(data) {
-        this.data = data.map(str => CryptoJS.SHA256(str).toString());
+        this.isReady = false;
+        this.leaves = data.map(str => this._hash(this._getBuffer(str)));
+        this.levels = [];
     }
 
-    computeRootHash() {
-        while (this.data.length > 1) {
-            var temp = [];
-            var isOdd = this.data.length % 2 == 1;
-            for (var i = 0; i < this.data.length - 1; i += 2) {
-                var left = this.data[i];
-                var right = this.data[i + 1];
-                temp.push(CryptoJS.SHA256(left + right).toString());
-            }
-            if (isOdd) {
-                temp.push(this.data[this.data.length - 1]);
-            }
-            this.data = temp;
+    makeTree() {
+        this.isReady = false;
+        this.levels.unshift(this.leaves);
+        while (this.levels[0].length > 1) {
+            this.levels.unshift(this._getNextLevel());
         }
-        return this.data[0];
+        this.isReady = true;
+    }
+
+    getRoot() {
+        return this.isReady ? this.levels[0][0] : null;
+    }
+
+    getProof(index) {
+        var proof = [];
+        for (var i = this.levels.length - 1; i > 0; i--) {
+            var isRightNode = index % 2;
+            var siblingIndex = isRightNode ? (index - 1) : (index + 1);
+            proof.push(new Buffer(isRightNode ? [0x00] : [0x01]));
+            proof.push(this.levels[i][siblingIndex]);
+            index = Math.floor(index / 2);
+        }
+        return proof;
+    }
+
+    _hash(value) {
+        return crypto.createHash('sha256').update(value).digest();
+    }
+
+    _getBuffer(value) {
+        return new Buffer(value, 'hex');
+    }
+
+    _getNextLevel() {
+        var nodes = [];
+        for (var i = 0; i < this.levels[0].length - 1; i += 2) {
+            var left = this.levels[0][i];
+            var right = this.levels[0][i + 1];
+            nodes.push(this._hash(Buffer.concat([left, right])));
+        }
+        return nodes;
     }
 }
 

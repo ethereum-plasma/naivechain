@@ -36,7 +36,7 @@ var signRegularTransaction = async (message, address) => {
 
 var isValidSignature = async (message, signature, address) => {
     var hash = await web3.eth.accounts.hashMessage(message);
-    var signer =  await web3.eth.accounts.recover(hash, signature);
+    var signer = await web3.eth.accounts.recover(hash, signature);
     return address.toLowerCase() == utils.removeHexPrefix(signer).toLowerCase();
 };
 
@@ -51,7 +51,7 @@ var deposit = async (address) => {
 };
 
 var getDeposits = async (blockNumber) => {
-    var depositEvents =  await plasmaContract.getPastEvents('DepositEvent', {
+    var depositEvents = await plasmaContract.getPastEvents('DepositEvent', {
         filter: {n: blockNumber.toString()},
         fromBlock: 0,
         toBlock: 'latest'
@@ -63,5 +63,51 @@ var getDeposits = async (blockNumber) => {
     return deposits;
 }
 
+var startWithdrawal = async (blockNumber, txIndex, targetTx, proof, address) => {
+    var gasCost = await plasmaContract.methods.startWithdrawal(blockNumber, txIndex, targetTx, proof).estimateGas({
+        from: address, gas: 1e8
+    });
+    var result = await plasmaContract.methods.startWithdrawal(blockNumber, txIndex, targetTx, proof).send({
+        from: address, gas: gasCost
+    });
+    var ev = result.events.WithdrawalStartedEvent.returnValues;
+    console.log(ev);
+    return ev.withdrawalId;
+};
+
+var challengeWithdrawal = async (withdrawalId, blockNumber, txIndex, targetTx, proof, address) => {
+    var gasCost = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blockNumber, txIndex, targetTx, proof).estimateGas({
+        from: address, gas: 1e8
+    });
+    var result = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blockNumber, txIndex, targetTx, proof).send({
+        from: address, gas: gasCost
+    });
+    console.log(result);
+};
+
+var finalizeWithdrawal = async (address) => {
+    var gasCost = await plasmaContract.methods.finalizeWithdrawal().estimateGas({
+        from: address, gas: 1e8
+    });
+    var result = await plasmaContract.methods.finalizeWithdrawal().send({
+        from: address, gas: gasCost
+    });
+    if (result.events.WithdrawalCompleteEvent != null) {
+        var ev = result.events.WithdrawalCompleteEvent.returnValues;
+        console.log(ev);
+    }
+};
+
+var getWithdrawals = async (blockNumber) => {
+    var withdrawalEvents = await plasmaContract.getPastEvents('WithdrawalCompleteEvent', {
+        filter: {n: blockNumber.toString()},
+        fromBlock: 0,
+        toBlock: 'latest'
+    });
+
+    return withdrawalEvents.map(ev => ev.returnValues);
+};
+
 module.exports = {signBlock, signDepositTransaction, signRegularTransaction,
-    submitBlockHeader, deposit, getDeposits, isValidSignature};
+    submitBlockHeader, deposit, getDeposits, isValidSignature, startWithdrawal,
+    challengeWithdrawal, finalizeWithdrawal, getWithdrawals};
