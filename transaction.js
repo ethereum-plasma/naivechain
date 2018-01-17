@@ -1,6 +1,6 @@
 'use strict';
 
-var CryptoJS = require("crypto-js");
+var crypto = require('crypto');
 
 var geth = require("./geth");
 var utils = require("./utils");
@@ -14,7 +14,7 @@ class Transaction {
     }
 
     get hash() {
-        return CryptoJS.SHA256(this.toString()).toString();
+        return crypto.createHash('sha256').update(this.toString()).digest('hex');
     }
 
     toString() {
@@ -187,21 +187,36 @@ var createDepositTransactions = async (deposits) => {
         var tx = new Transaction(0, 0, utils.removeHexPrefix(deposits[i].from), "");
         var signature = await geth.signDepositTransaction(tx.toString());
         tx.setSignature(utils.removeHexPrefix(signature));
-        depositTxs.push(tx);
+        depositTxs.push(tx.toString());
     }
     return depositTxs;
 };
 
-var collectTransactions = async (deposits) => {
-    var utxoCopy = utxo.slice();
+var removeWithdrawalUTXOs = (withdrawals) => {
+    for (var i = 0; i < withdrawals.length; i++) {
+        for (var j = 0; j < utxo.length; j++) {
+            if (utxo[j].blockNumber == parseInt(withdrawals[i].blockNumber) &&
+                utxo[j].txIndex == parseInt(withdrawals[i].txIndex)) {
+                utxo.splice(j, 1);
+            }
+        }
+    }
+};
 
-    var regularTxs = [];
-    var depositTxs = [];
+var collectTransactions = async (deposits, withdrawals) => {
+    var utxoCopy = utxo.slice();
+    var txs = [];
 
     if (deposits.length > 0) {
         console.log('Deposit transactions found.');
         console.log(deposits);
-        depositTxs = await createDepositTransactions(deposits);
+        txs = await createDepositTransactions(deposits);
+    }
+
+    if (withdrawals.length > 0) {
+        console.log('Withdrawals detected.');
+        console.log(withdrawals);
+        removeWithdrawalUTXOs(withdrawals);
     }
 
     for (var i = 0; i < txPool.length; i++) {
@@ -210,24 +225,20 @@ var collectTransactions = async (deposits) => {
         if (idx != -1) {
             // Remove the utxo to avoid double spending.
             utxoCopy.splice(idx, 1);
-            regularTxs.push(tx);
+            txs.push(tx.toString());
         }
 
-        if (regularTxs.length >= 64) {
+        if (txs.length >= 256) {
             break;
         }
     }
 
-    var txs = [];
-    regularTxs.forEach(rTx => txs.push(rTx.toString()));
-
-    // Fill empty string if regular transactions are less than 64.
-    var len = regularTxs.length;
-    for (var i = len; i < 64; i++) {
+    // Fill empty string if transactions are less than 256.
+    var len = txs.length;
+    for (var i = len; i < 256; i++) {
         txs.push("");
     }
 
-    depositTxs.forEach(dTx => txs.push(dTx.toString()));
     return txs;
 };
 

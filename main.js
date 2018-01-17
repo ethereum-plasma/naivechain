@@ -1,4 +1,5 @@
 'use strict';
+
 var express = require("express");
 var bodyParser = require('body-parser');
 var WebSocket = require("ws");
@@ -6,6 +7,7 @@ var WebSocket = require("ws");
 var block = require("./block");
 var tx = require("./transaction");
 var geth = require("./geth");
+var utils = require("./utils");
 
 var http_port = process.env.HTTP_PORT || 3001;
 var p2p_port = process.env.P2P_PORT || 6001;
@@ -25,7 +27,7 @@ var initHttpServer = () => {
 
     // Block related
     app.get('/blocks', (req, res) => {
-        res.send(JSON.stringify(block.getBlocks()));
+        res.send(JSON.stringify(block.getBlocks().map(b => b.printBlock())));
     });
     app.post('/mineBlock', async (req, res) => {
         try {
@@ -74,8 +76,29 @@ var initHttpServer = () => {
         }
     });
 
+    // Deposit related
     app.post('/deposit', (req, res) => {
         geth.deposit(req.body.address);
+        res.send();
+    });
+
+    // Withdrawal related
+    app.post('/withdraw/create', async (req, res) => {
+        var p = block.getTransactionProofInBlock(req.body.blockNumber,
+            req.body.txIndex);
+        var withdrawalId = await geth.startWithdrawal(req.body.blockNumber,
+            req.body.txIndex, p.tx, p.proof, req.body.address);
+        res.send(withdrawalId);
+    });
+    app.post('/withdraw/challenge', async (req, res) => {
+        var p = block.getTransactionProofInBlock(req.body.blockNumber,
+            req.body.txIndex);
+        await geth.challengeWithdrawal(req.body.withdrawalId,
+            req.body.blockNumber, req.body.txIndex, p.tx, p.proof, req.body.address);
+        res.send();
+    });
+    app.post('/withdraw/finalize', async (req, res) => {
+        await geth.finalizeWithdrawal(req.body.address);
         res.send();
     });
 
@@ -144,14 +167,15 @@ var connectToPeers = (newPeers) => {
 };
 
 var handleBlockchainResponse = async (message) => {
-    var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.blockHeader.blockNumber - b2.blockHeader.blockNumber));
+    var receivedBlocks = message.data.map(m => block.constructBlockFromString(m))
+                                     .sort((b1, b2) => (b1.blockHeader.blockNumber - b2.blockHeader.blockNumber));
     var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
     var latestBlockHeld = block.getLatestBlock();
     if (latestBlockReceived.blockHeader.blockNumber > latestBlockHeld.blockHeader.blockNumber) {
         console.log('Blockchain possibly behind. We got: ' +
         latestBlockHeld.blockHeader.blockNumber + ' Peer got: ' +
         latestBlockReceived.blockHeader.blockNumber);
-        if (block.calculateHashForBlock(latestBlockHeld) === latestBlockReceived.blockHeader.previousHash) {
+        if (latestBlockHeld.hash === latestBlockReceived.blockHeader.previousHash) {
             try {
                 block.addBlock(latestBlockReceived);
                 console.log('We can append the received block to our chain.');
@@ -193,11 +217,11 @@ var queryAllMsg = () => ({
 });
 var responseLatestMsg = () => ({
     'type': MessageType.RESPONSE_BLOCKCHAIN,
-    'data': JSON.stringify([block.getLatestBlock()])
+    'data': [block.getLatestBlock().toString()]
 });
 var responseChainMsg = () =>({
     'type': MessageType.RESPONSE_BLOCKCHAIN,
-    'data': JSON.stringify(block.getBlocks())
+    'data': block.getBlocks().map(b => b.toString())
 });
 var responseTxMsg = (tx) => ({
     'type': MessageType.RESPONSE_TRANSACTION,

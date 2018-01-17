@@ -14,4 +14,13 @@ var removeHexPrefix = (msg) => {
     }
 };
 
-module.exports = {addHexPrefix, removeHexPrefix};
+var bufferToHex = (buf, withPrefix) => {
+    if (withPrefix) {
+        return addHexPrefix(buf.toString('hex'));
+    } else {
+        return buf.toString('hex');
+    }
+
+}
+
+module.exports = {addHexPrefix, removeHexPrefix, bufferToHex};
