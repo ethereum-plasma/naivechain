@@ -20,7 +20,6 @@ var bufferToHex = (buf, withPrefix) => {
     } else {
         return buf.toString('hex');
     }
-
 }
 
 module.exports = {addHexPrefix, removeHexPrefix, bufferToHex};

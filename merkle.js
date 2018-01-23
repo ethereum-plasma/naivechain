@@ -1,6 +1,6 @@
 'use strict';
 
-var crypto = require('crypto');
+var createKeccakHash = require('keccak');
 
 class Merkle {
     constructor(data) {
@@ -35,7 +35,7 @@ class Merkle {
     }
 
     _hash(value) {
-        return crypto.createHash('sha256').update(value).digest();
+        return createKeccakHash('keccak256').update(value).digest();
     }
 
     _getBuffer(value) {

@@ -8,6 +8,7 @@
   "dependencies": {
     "body-parser": "^1.15.2",
     "express": "~4.11.1",
+    "keccak": "^1.4.0",
     "web3": "^1.0.0-beta.27",
     "ws": "^1.1.0"
   },
