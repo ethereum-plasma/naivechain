@@ -78,29 +78,6 @@ class BlockHeader {
     }
 }
 
-var constructBlockFromString = (rawBlock) => {
-    var blockNumber = parseInt(rawBlock.substring(0, 8));
-    var previousHash = rawBlock.substring(8, 72);
-    var sig = rawBlock.length == 72 ? "" : rawBlock.substring(136, 266);
-
-    var data = [];
-    var idx = 266;
-    while (idx + 180 <= rawBlock.length) {
-        data.push(rawBlock.substring(idx, idx + 180));
-        idx += 180;
-    }
-    var len = data.length;
-    for (var i = len; i < 256; i++) {
-        data.push("");
-    }
-
-    var block = new Block(blockNumber, previousHash, data);
-    if (sig != "") {
-        block.blockHeader.setSignature(sig);
-    }
-    return block;
-};
-
 var getGenesisBlock = () => {
     // Create a hard coded genesis block.
     return new Block(0, '46182d20ccd7006058f3e801a1ff3de78b740b557bba686ced70f8e3d8a009a6', []);
@@ -159,30 +136,6 @@ var isValidNewBlock = async (newBlock, previousBlock) => {
     return true;
 };
 
-var replaceChain = async (newBlocks) => {
-    if (await isValidChain(newBlocks) && newBlocks.length > blockchain.length) {
-        console.log('Received blockchain is valid. Replacing current blockchain with received blockchain.');
-        blockchain = newBlocks;
-    } else {
-        throw "Received blockchain is invalid.";
-    }
-};
-
-var isValidChain = async (blockchainToValidate) => {
-    if (blockchainToValidate[0].toString() !== blockchain[0].toString()) {
-        return false;
-    }
-    var tempBlocks = [blockchainToValidate[0]];
-    for (var i = 1; i < blockchainToValidate.length; i++) {
-        if (await isValidNewBlock(blockchainToValidate[i], tempBlocks[i - 1])) {
-            tempBlocks.push(blockchainToValidate[i]);
-        } else {
-            return false;
-        }
-    }
-    return true;
-};
-
 var getTransactionProofInBlock = (blockNumber, txIndex) => {
     var block = getBlock(blockNumber);
     var tx = utils.addHexPrefix(block.transactions[txIndex]);
@@ -198,5 +151,5 @@ var getLatestBlock = () => blockchain[blockchain.length - 1];
 var getBlocks = () => blockchain;
 var getBlock = (index) => blockchain[index];
 
-module.exports = {addBlock, replaceChain, getLatestBlock, getBlocks,
-    generateNextBlock, getTransactionProofInBlock, constructBlockFromString};
+module.exports = {getLatestBlock, getBlocks, generateNextBlock,
+    getTransactionProofInBlock};
