@@ -26,26 +26,23 @@ var signBlock = async (message) => {
     return await web3.eth.sign(message, contractConfig.plasmaOperatorAddress);
 };
 
-var signDepositTransaction = async (message) => {
-    return await web3.eth.sign(message, contractConfig.plasmaOperatorAddress);
-};
-
-var signRegularTransaction = async (message, address) => {
+var signTransaction = async (message, address) => {
     return await web3.eth.sign(message, address);
 };
 
 var isValidSignature = async (message, signature, address) => {
     var hash = await web3.eth.accounts.hashMessage(message);
     var signer = await web3.eth.accounts.recover(hash, signature);
-    return address.toLowerCase() == utils.removeHexPrefix(signer).toLowerCase();
+    return utils.removeHexPrefix(address.toLowerCase()) == utils.removeHexPrefix(signer.toLowerCase());
 };
 
-var deposit = async (address) => {
+var deposit = async (address, amount) => {
+    amount = utils.etherToWei(amount);
     var gasCost = await plasmaContract.methods.deposit().estimateGas({
-        from: address, value: 1000000000000000000, gas: 1e8
+        from: address, value: amount, gas: 1e8
     });
     var result = await plasmaContract.methods.deposit().send({
-        from: address, value: 1000000000000000000, gas: gasCost
+        from: address, value: amount, gas: gasCost
     });
     console.log(result);
 };
@@ -63,34 +60,34 @@ var getDeposits = async (blockNumber) => {
     return deposits;
 }
 
-var startWithdrawal = async (blockNumber, txIndex, targetTx, proof, address) => {
-    var gasCost = await plasmaContract.methods.startWithdrawal(blockNumber, txIndex, targetTx, proof).estimateGas({
-        from: address, gas: 1e8
+var startWithdrawal = async (blkNum, txIndex, oIndex, targetTx, proof, from) => {
+    var gasCost = await plasmaContract.methods.startWithdrawal(blkNum, txIndex, oIndex, targetTx, proof).estimateGas({
+        from: from, gas: 1e8
     });
-    var result = await plasmaContract.methods.startWithdrawal(blockNumber, txIndex, targetTx, proof).send({
-        from: address, gas: gasCost
+    var result = await plasmaContract.methods.startWithdrawal(blkNum, txIndex, oIndex, targetTx, proof).send({
+        from: from, gas: gasCost
     });
     var ev = result.events.WithdrawalStartedEvent.returnValues;
     console.log(ev);
     return ev.withdrawalId;
 };
 
-var challengeWithdrawal = async (withdrawalId, blockNumber, txIndex, targetTx, proof, address) => {
-    var gasCost = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blockNumber, txIndex, targetTx, proof).estimateGas({
-        from: address, gas: 1e8
+var challengeWithdrawal = async (withdrawalId, blkNum, txIndex, oIndex, targetTx, proof, from) => {
+    var gasCost = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, targetTx, proof).estimateGas({
+        from: from, gas: 1e8
     });
-    var result = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blockNumber, txIndex, targetTx, proof).send({
-        from: address, gas: gasCost
+    var result = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, targetTx, proof).send({
+        from: from, gas: gasCost
     });
     console.log(result);
 };
 
-var finalizeWithdrawal = async (address) => {
+var finalizeWithdrawal = async (from) => {
     var gasCost = await plasmaContract.methods.finalizeWithdrawal().estimateGas({
-        from: address, gas: 1e8
+        from: from, gas: 1e8
     });
     var result = await plasmaContract.methods.finalizeWithdrawal().send({
-        from: address, gas: gasCost
+        from: from, gas: gasCost
     });
     if (result.events.WithdrawalCompleteEvent != null) {
         var ev = result.events.WithdrawalCompleteEvent.returnValues;
@@ -108,6 +105,6 @@ var getWithdrawals = async (blockNumber) => {
     return withdrawalEvents.map(ev => ev.returnValues);
 };
 
-module.exports = {signBlock, signDepositTransaction, signRegularTransaction,
-    submitBlockHeader, deposit, getDeposits, isValidSignature, startWithdrawal,
-    challengeWithdrawal, finalizeWithdrawal, getWithdrawals};
+module.exports = {signBlock, signTransaction, submitBlockHeader, deposit,
+    getDeposits, isValidSignature, startWithdrawal, challengeWithdrawal,
+    finalizeWithdrawal, getWithdrawals};

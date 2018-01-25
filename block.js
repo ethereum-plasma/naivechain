@@ -11,7 +11,7 @@ var Merkle = require("./merkle");
 class Block {
     constructor(blockNumber, previousHash, transactions) {
         var data = [];
-        transactions.forEach(tx => data.push(tx.toString()));
+        transactions.forEach(tx => data.push(tx.toString(true)));
 
         this.blockHeader = new BlockHeader(blockNumber, previousHash, data);
         this.transactions = transactions;
@@ -90,50 +90,25 @@ var generateNextBlock = async () => {
     var previousHash = previousBlock.hash;
     var nextIndex = previousBlock.blockHeader.blockNumber + 1;
 
-    // Query contract past event for deposits and withdrawals.
+    // Query contract past event for deposits / withdrawals and collect transactions.
     var deposits = await geth.getDeposits(nextIndex - 1);
     var withdrawals = await geth.getWithdrawals(nextIndex - 1);
-    var transactions = await tx.collectTransactions(deposits, withdrawals);
-    var rawBlock = new Block(nextIndex, previousHash, transactions);
+    var transactions = await tx.collectTransactions(nextIndex, deposits, withdrawals);
+    var newBlock = new Block(nextIndex, previousHash, transactions);
 
-    // Operator signs the block.
-    var messageToSign = utils.addHexPrefix(rawBlock.blockHeader.toString(false));
-    try {
-        var signature = await geth.signBlock(messageToSign);
-        rawBlock.blockHeader.setSignature(signature);
+    // Operator signs the new block.
+    var messageToSign = utils.addHexPrefix(newBlock.blockHeader.toString(false));
+    var signature = await geth.signBlock(messageToSign);
+    newBlock.blockHeader.setSignature(signature);
 
-        // Submit the block header to plasma contract.
-        var hexPrefixHeader = utils.addHexPrefix(rawBlock.blockHeader.toString(true));
-        geth.submitBlockHeader(hexPrefixHeader);
+    // Add the new block to blockchain.
+    console.log('New block added.');
+    console.log(newBlock.printBlock());
+    blockchain.push(newBlock);
 
-        await addBlock(rawBlock);
-    } catch (e) {
-        throw e;
-    }
-};
-
-var addBlock = async (newBlock) => {
-    if (await isValidNewBlock(newBlock, getLatestBlock())) {
-        console.log('New block added.');
-        console.log(newBlock.printBlock());
-        blockchain.push(newBlock);
-    } else {
-        throw "New block is invalid.";
-    }
-};
-
-var isValidNewBlock = async (newBlock, previousBlock) => {
-    if (previousBlock.blockHeader.blockNumber + 1 !== newBlock.blockHeader.blockNumber) {
-        console.log('Block number is invalid.');
-        return false;
-    } else if (previousBlock.hash !== newBlock.blockHeader.previousHash) {
-        console.log('Previous block hash is invalid.');
-        return false;
-    } else if (await !tx.isValidBlockContent(newBlock)) {
-        console.log('Transactions in block are invalid.');
-        return false;
-    }
-    return true;
+    // Submit the block header to plasma contract.
+    var hexPrefixHeader = utils.addHexPrefix(newBlock.blockHeader.toString(true));
+    geth.submitBlockHeader(hexPrefixHeader);
 };
 
 var getTransactionProofInBlock = (blockNumber, txIndex) => {

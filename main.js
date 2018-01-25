@@ -6,7 +6,6 @@ var bodyParser = require('body-parser');
 var block = require("./block");
 var tx = require("./transaction");
 var geth = require("./geth");
-var utils = require("./utils");
 
 var http_port = process.env.HTTP_PORT || 3001;
 
@@ -28,55 +27,35 @@ var initHttpServer = () => {
     });
 
     // Transaction related
-    app.post('/transaction/create', (req, res) => {
-        var rawTx = tx.createRawTransaction(req.body);
+    app.post('/transact', async (req, res) => {
+        var rawTx = await tx.createTransaction(req.body);
         console.log('New transaction created: ' + JSON.stringify(rawTx));
-        res.send(rawTx.toString());
-    });
-    app.post('/transaction/sign', async (req, res) => {
-        try {
-            var signedTx = await tx.signRawTransaction(req.body);
-            console.log('Transaction signed: ' + JSON.stringify(signedTx));
-            res.send(signedTx.toString());
-        } catch (e) {
-            console.log(e);
-            res.send(e);
-        }
-    });
-    app.post('/transaction/send', async (req, res) => {
-        try {
-            var newTx = await tx.sendRawTransaction(req.body.rawTx);
-            console.log('New Transaction added: ' + JSON.stringify(newTx));
-            res.send(newTx.toString());
-        } catch (e) {
-            console.log(e);
-            res.send(e);
-        }
+        res.send(rawTx.toString(true));
     });
 
     // Deposit related
     app.post('/deposit', (req, res) => {
-        geth.deposit(req.body.address);
+        geth.deposit(req.body.address, req.body.amount);
         res.send();
     });
 
     // Withdrawal related
     app.post('/withdraw/create', async (req, res) => {
-        var p = block.getTransactionProofInBlock(req.body.blockNumber,
+        var p = block.getTransactionProofInBlock(req.body.blkNum,
             req.body.txIndex);
-        var withdrawalId = await geth.startWithdrawal(req.body.blockNumber,
-            req.body.txIndex, p.tx, p.proof, req.body.address);
+        var withdrawalId = await geth.startWithdrawal(req.body.blkNum,
+            req.body.txIndex, req.body.oIndex, p.tx, p.proof, req.body.from);
         res.send(withdrawalId);
     });
     app.post('/withdraw/challenge', async (req, res) => {
-        var p = block.getTransactionProofInBlock(req.body.blockNumber,
+        var p = block.getTransactionProofInBlock(req.body.blkNum,
             req.body.txIndex);
-        await geth.challengeWithdrawal(req.body.withdrawalId,
-            req.body.blockNumber, req.body.txIndex, p.tx, p.proof, req.body.address);
+        await geth.challengeWithdrawal(req.body.withdrawalId, req.body.blkNum,
+            req.body.txIndex, req.body.oIndex, p.tx, p.proof, req.body.address);
         res.send();
     });
     app.post('/withdraw/finalize', async (req, res) => {
-        await geth.finalizeWithdrawal(req.body.address);
+        await geth.finalizeWithdrawal(req.body.from);
         res.send();
     });
 

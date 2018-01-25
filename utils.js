@@ -20,6 +20,15 @@ var bufferToHex = (buf, withPrefix) => {
     } else {
         return buf.toString('hex');
     }
-}
+};
 
-module.exports = {addHexPrefix, removeHexPrefix, bufferToHex};
+var weiToEther = (data) => {
+    return data / 1000000000000000000;
+};
+
+var etherToWei = (data) => {
+    return data * 1000000000000000000;
+};
+
+module.exports = {addHexPrefix, removeHexPrefix, bufferToHex, weiToEther,
+    etherToWei};
