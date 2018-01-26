@@ -40,7 +40,7 @@ class Block {
 
 class BlockHeader {
     constructor(blockNumber, previousHash, data) {
-        this.blockNumber = blockNumber;  // 4 bytes
+        this.blockNumber = blockNumber;  // 32 bytes
         this.previousHash = previousHash;  // 32 bytes
         if (blockNumber == 0) {
             this.merkle = null;
@@ -69,7 +69,7 @@ class BlockHeader {
     }
 
     toString(includingSig) {
-        var blkNumHexString = this.blockNumber.toString(16).padStart(8, "0");
+        var blkNumHexString = this.blockNumber.toString(16).padStart(64, "0");
         var rawBlockHeader = blkNumHexString + this.previousHash + this.merkleRoot;
         if (includingSig) {
             rawBlockHeader += this.sigR + this.sigS + this.sigV;
@@ -109,6 +109,8 @@ var generateNextBlock = async () => {
     // Submit the block header to plasma contract.
     var hexPrefixHeader = utils.addHexPrefix(newBlock.blockHeader.toString(true));
     geth.submitBlockHeader(hexPrefixHeader);
+
+    return newBlock;
 };
 
 var getTransactionProofInBlock = (blockNumber, txIndex) => {

@@ -18,12 +18,8 @@ var initHttpServer = () => {
         res.send(JSON.stringify(block.getBlocks().map(b => b.printBlock())));
     });
     app.post('/mineBlock', async (req, res) => {
-        try {
-            await block.generateNextBlock();
-        } catch (e) {
-            console.log(e);
-        }
-        res.send();
+        var newBlock = await block.generateNextBlock();
+        res.send(newBlock.printBlock());
     });
 
     // Transaction related
@@ -51,7 +47,7 @@ var initHttpServer = () => {
         var p = block.getTransactionProofInBlock(req.body.blkNum,
             req.body.txIndex);
         await geth.challengeWithdrawal(req.body.withdrawalId, req.body.blkNum,
-            req.body.txIndex, req.body.oIndex, p.tx, p.proof, req.body.address);
+            req.body.txIndex, req.body.oIndex, p.tx, p.proof, req.body.from);
         res.send();
     });
     app.post('/withdraw/finalize', async (req, res) => {

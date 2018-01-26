@@ -88,9 +88,9 @@ var createDepositTransactions = async (blockNumber, txs, deposits) => {
 
 var createWithdrawalTransactions = async (blockNumber, txs, withdrawals) => {
     for (var i = 0; i < withdrawals.length; i++) {
-        var blkNum = parseInt(withdrawals[i].blockNumber);
-        var txIndex = parseInt(withdrawals[i].txIndex);
-        var oIndex = parseInt(withdrawals[i].outputIndex);
+        var blkNum = parseInt(withdrawals[i].exitBlockNumber);
+        var txIndex = parseInt(withdrawals[i].exitTxIndex);
+        var oIndex = parseInt(withdrawals[i].exitOIndex);
         var tx = new Transaction(blkNum, txIndex, oIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         await updateUTXO(blockNumber, tx, txs);
     }

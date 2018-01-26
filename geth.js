@@ -49,7 +49,7 @@ var deposit = async (address, amount) => {
 
 var getDeposits = async (blockNumber) => {
     var depositEvents = await plasmaContract.getPastEvents('DepositEvent', {
-        filter: {n: blockNumber.toString()},
+        filter: {blockNumber: blockNumber.toString()},
         fromBlock: 0,
         toBlock: 'latest'
     });
@@ -73,10 +73,10 @@ var startWithdrawal = async (blkNum, txIndex, oIndex, targetTx, proof, from) => 
 };
 
 var challengeWithdrawal = async (withdrawalId, blkNum, txIndex, oIndex, targetTx, proof, from) => {
-    var gasCost = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, targetTx, proof).estimateGas({
+    var gasCost = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, oIndex, targetTx, proof).estimateGas({
         from: from, gas: 1e8
     });
-    var result = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, targetTx, proof).send({
+    var result = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, oIndex, targetTx, proof).send({
         from: from, gas: gasCost
     });
     console.log(result);
@@ -97,7 +97,7 @@ var finalizeWithdrawal = async (from) => {
 
 var getWithdrawals = async (blockNumber) => {
     var withdrawalEvents = await plasmaContract.getPastEvents('WithdrawalCompleteEvent', {
-        filter: {n: blockNumber.toString()},
+        filter: {blockNumber: blockNumber.toString()},
         fromBlock: 0,
         toBlock: 'latest'
     });

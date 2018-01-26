@@ -19,13 +19,48 @@
 		"type": "function"
 	},
 	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "blockNumber",
+				"type": "uint256"
+			},
+			{
+				"name": "txIndex",
+				"type": "uint256"
+			},
+			{
+				"name": "oIndex",
+				"type": "uint256"
+			},
+			{
+				"name": "targetTx",
+				"type": "bytes"
+			},
+			{
+				"name": "proof",
+				"type": "bytes"
+			}
+		],
+		"name": "startWithdrawal",
+		"outputs": [
+			{
+				"name": "withdrawalId",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"constant": true,
 		"inputs": [],
 		"name": "lastBlockNumber",
 		"outputs": [
 			{
 				"name": "",
-				"type": "uint32"
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -47,12 +82,24 @@
 		"name": "depositRecords",
 		"outputs": [
 			{
-				"name": "n",
-				"type": "uint32"
+				"name": "blockNumber",
+				"type": "uint256"
 			},
 			{
-				"name": "ctr",
-				"type": "uint32"
+				"name": "txIndex",
+				"type": "uint256"
+			},
+			{
+				"name": "depositor",
+				"type": "address"
+			},
+			{
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"name": "timeCreated",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -94,7 +141,7 @@
 		"outputs": [
 			{
 				"name": "blockNumber",
-				"type": "uint32"
+				"type": "uint256"
 			},
 			{
 				"name": "previousHash",
@@ -115,6 +162,24 @@
 			{
 				"name": "v",
 				"type": "uint8"
+			},
+			{
+				"name": "timeSubmitted",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "txCounter",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -147,15 +212,23 @@
 		"outputs": [
 			{
 				"name": "blockNumber",
-				"type": "uint32"
+				"type": "uint256"
 			},
 			{
 				"name": "txIndex",
-				"type": "uint32"
+				"type": "uint256"
+			},
+			{
+				"name": "oIndex",
+				"type": "uint256"
 			},
 			{
 				"name": "beneficiary",
 				"type": "address"
+			},
+			{
+				"name": "amount",
+				"type": "uint256"
 			},
 			{
 				"name": "status",
@@ -172,41 +245,6 @@
 		],
 		"payable": false,
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "withdrawalId",
-				"type": "uint256"
-			},
-			{
-				"name": "blockNumber",
-				"type": "uint32"
-			},
-			{
-				"name": "txIndex",
-				"type": "uint32"
-			},
-			{
-				"name": "targetTx",
-				"type": "bytes"
-			},
-			{
-				"name": "proof",
-				"type": "bytes"
-			}
-		],
-		"name": "challengeWithdrawal",
-		"outputs": [
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -243,6 +281,20 @@
 		"type": "function"
 	},
 	{
+		"constant": true,
+		"inputs": [],
+		"name": "oldBlockNumber",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"constant": false,
 		"inputs": [],
 		"name": "deposit",
@@ -260,12 +312,20 @@
 		"constant": false,
 		"inputs": [
 			{
+				"name": "withdrawalId",
+				"type": "uint256"
+			},
+			{
 				"name": "blockNumber",
-				"type": "uint32"
+				"type": "uint256"
 			},
 			{
 				"name": "txIndex",
-				"type": "uint32"
+				"type": "uint256"
+			},
+			{
+				"name": "oIndex",
+				"type": "uint256"
 			},
 			{
 				"name": "targetTx",
@@ -276,29 +336,15 @@
 				"type": "bytes"
 			}
 		],
-		"name": "startWithdrawal",
+		"name": "challengeWithdrawal",
 		"outputs": [
 			{
-				"name": "withdrawalId",
-				"type": "uint256"
+				"name": "success",
+				"type": "bool"
 			}
 		],
 		"payable": false,
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "depositCounter",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -339,13 +385,13 @@
 			},
 			{
 				"indexed": true,
-				"name": "n",
-				"type": "uint32"
+				"name": "blockNumber",
+				"type": "uint256"
 			},
 			{
 				"indexed": false,
-				"name": "ctr",
-				"type": "uint32"
+				"name": "txIndex",
+				"type": "uint256"
 			}
 		],
 		"name": "DepositEvent",
@@ -379,24 +425,24 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
-				"name": "withdrawalId",
+				"indexed": true,
+				"name": "blockNumber",
 				"type": "uint256"
 			},
 			{
-				"indexed": true,
-				"name": "n",
-				"type": "uint32"
+				"indexed": false,
+				"name": "exitBlockNumber",
+				"type": "uint256"
 			},
 			{
 				"indexed": false,
-				"name": "blockNumber",
-				"type": "uint32"
+				"name": "exitTxIndex",
+				"type": "uint256"
 			},
 			{
 				"indexed": false,
-				"name": "txIndex",
-				"type": "uint32"
+				"name": "exitOIndex",
+				"type": "uint256"
 			}
 		],
 		"name": "WithdrawalCompleteEvent",
