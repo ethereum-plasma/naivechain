@@ -11,22 +11,22 @@ class Transaction {
         blkNum2, txIndex2, oIndex2, sig2,
         newOwner1, denom1, newOwner2, denom2, fee) {
         // first input
-        this.blkNum1 = blkNum1;  // 4 bytes
-        this.txIndex1 = txIndex1;  // 1 byte
-        this.oIndex1 = oIndex1;  // 1 byte
-        this.sig1 = sig1;  // 65 bytes
+        this.blkNum1 = blkNum1;
+        this.txIndex1 = txIndex1;
+        this.oIndex1 = oIndex1;
+        this.sig1 = sig1;
 
         // second input
-        this.blkNum2 = blkNum2;  // 4 bytes
-        this.txIndex2 = txIndex2;  // 1 byte
-        this.oIndex2 = oIndex2;  // 1 byte
-        this.sig2 = sig2;  // 65 bytes
+        this.blkNum2 = blkNum2;
+        this.txIndex2 = txIndex2;
+        this.oIndex2 = oIndex2;
+        this.sig2 = sig2;
 
         // outputs
-        this.newOwner1 = newOwner1;  // 20 bytes
-        this.denom1 = denom1;  // 4 bytes
-        this.newOwner2 = newOwner2;  // 20 bytes
-        this.denom2 = denom2;  // 4 bytes
+        this.newOwner1 = newOwner1;
+        this.denom1 = denom1;
+        this.newOwner2 = newOwner2;
+        this.denom2 = denom2;
 
         this.fee = fee;
     }
