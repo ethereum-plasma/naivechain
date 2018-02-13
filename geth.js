@@ -3,20 +3,17 @@
 var Web3 = require("web3");
 
 var utils = require("./utils");
-var contractAbi = require("./contract/abi.json");
-var contractConfig = require("./contract/config");
+var artifacts = require("./build/contracts/PlasmaChainManager.json");
+var contractConfig = require("./config");
 
 var provider = new Web3.providers.HttpProvider('http://localhost:8545');
 var web3 = new Web3(provider);
 
-var plasmaContract = new web3.eth.Contract(contractAbi, contractConfig.plasmaContractAddress, {gas: 1000000});
+var plasmaContract = new web3.eth.Contract(artifacts.abi, contractConfig.plasmaContractAddress, {gas: 1000000});
 
 var submitBlockHeader = async (header) => {
-    var gasCost = await plasmaContract.methods.submitBlockHeader(header).estimateGas({
-        from: contractConfig.plasmaOperatorAddress, gas: 1e8
-    });
     var result = await plasmaContract.methods.submitBlockHeader(header).send({
-        from: contractConfig.plasmaOperatorAddress, gas: gasCost
+        from: contractConfig.plasmaOperatorAddress, gas: 300000
     });
     var ev = result.events.HeaderSubmittedEvent.returnValues;
     console.log(ev);
@@ -38,11 +35,8 @@ var isValidSignature = async (message, signature, address) => {
 
 var deposit = async (address, amount) => {
     amount = utils.etherToWei(amount);
-    var gasCost = await plasmaContract.methods.deposit().estimateGas({
-        from: address, value: amount, gas: 1e8
-    });
     var result = await plasmaContract.methods.deposit().send({
-        from: address, value: amount, gas: gasCost
+        from: address, value: amount, gas: 300000
     });
     console.log(result);
 };
@@ -61,11 +55,8 @@ var getDeposits = async (blockNumber) => {
 }
 
 var startWithdrawal = async (blkNum, txIndex, oIndex, targetTx, proof, from) => {
-    var gasCost = await plasmaContract.methods.startWithdrawal(blkNum, txIndex, oIndex, targetTx, proof).estimateGas({
-        from: from, gas: 1e8
-    });
     var result = await plasmaContract.methods.startWithdrawal(blkNum, txIndex, oIndex, targetTx, proof).send({
-        from: from, gas: gasCost
+        from: from, gas: 300000
     });
     var ev = result.events.WithdrawalStartedEvent.returnValues;
     console.log(ev);
@@ -73,21 +64,15 @@ var startWithdrawal = async (blkNum, txIndex, oIndex, targetTx, proof, from) => 
 };
 
 var challengeWithdrawal = async (withdrawalId, blkNum, txIndex, oIndex, targetTx, proof, from) => {
-    var gasCost = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, oIndex, targetTx, proof).estimateGas({
-        from: from, gas: 1e8
-    });
     var result = await plasmaContract.methods.challengeWithdrawal(withdrawalId, blkNum, txIndex, oIndex, targetTx, proof).send({
-        from: from, gas: gasCost
+        from: from, gas: 300000
     });
     console.log(result);
 };
 
 var finalizeWithdrawal = async (from) => {
-    var gasCost = await plasmaContract.methods.finalizeWithdrawal().estimateGas({
-        from: from, gas: 1e8
-    });
     var result = await plasmaContract.methods.finalizeWithdrawal().send({
-        from: from, gas: gasCost
+        from: from, gas: 300000
     });
     if (result.events.WithdrawalCompleteEvent != null) {
         var ev = result.events.WithdrawalCompleteEvent.returnValues;

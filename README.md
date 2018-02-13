@@ -21,14 +21,50 @@ A withdrawal is initiated by calling the plasma contract. After creating a withd
 
 ## Prerequisite
 
-1. Launch an Ethereum private chain as the root chain.
-2. Deploy the [plasma smart contract](https://github.com/ethereum-plasma/PlasmaContract) on the root chain manually.
-3. Set the contract address at config file (config.js).
-4. Create accounts on Ethereum blockchain for the operator and participants.
+1. [Truffle](http://truffleframework.com/): An Ethereum development framework which helps us compiling, deploying, and interacting with smart contract.
+2. Testrpc: A test Ethereum RPC client for fast development. Here, we use [ganache-cli](https://github.com/trufflesuite/ganache-cli). If you prefer a GUI version, you could replace it with [ganache](http://truffleframework.com/ganache/). Note that you could also launch an Ethereum private chain (geth) to replace testrpc.
 
-## Run a plasma chain
+## Run
+1. Install dependency.
 ```
 npm install
+```
+2. Run a testrpc.
+```
+ganache-cli
+```
+Testrpc will generate ten default accounts for us. For convenience, you could specify a HD wallet mnemonic to get fixed addresses. For example:
+```
+ganache-cli -m pink two example move shop length clean crop cheese tent strike field
+```
+The corresponding initial addresses are:
+```
+(0) 0x0bf5f0f213b0b752858e9352fd6081f5d730dc17
+(1) 0x87dbd8ab1bd9d4fce07db12743594a5f456435ff
+(2) 0x3b0ba3134ac12cc065d4dba498a60cba5ef16098
+(3) 0x6c7f749d0e21aa6478af8e7adc362a8bf76be826
+(4) 0x9a404f89ad853e592d7b48242b4745c17a8ee852
+(5) 0x34d5e94fc3e7ecac3859a03176cb57534f30b71c
+(6) 0x8c0e1d37680a03eeb4c85880ffe1edf61ffa76f4
+(7) 0x6017db4acdfed284da94485d715a0f758048ac0b
+(8) 0x239ddceb1d7cebf07435a52f569b86f310af9cad
+(9) 0x1166d1f78f44c79e8e3f0d74419940e521790d7c
+```
+3. Compile contracts
+```
+truffle compile
+```
+4. Deploy contracts
+```
+truffle migrate
+```
+If you need to deploy contracts on this testrpc again, don't forget to add the `--reset` argument.
+
+5. Set the contract configuration (config.js).
+    1. After deploying contracts, fill in the `PlasmaChainManager` contract address.
+    2. Choose one of the initial addresses as the operator address, for example, `0x87dbd8ab1bd9d4fce07db12743594a5f456435ff`.
+6. Run the plasma chain.
+```
 HTTP_PORT=3001 npm start
 ```
 
