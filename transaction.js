@@ -9,7 +9,7 @@ var utils = require("./utils");
 class Transaction {
     constructor(blkNum1, txIndex1, oIndex1, sig1,
         blkNum2, txIndex2, oIndex2, sig2,
-        newOwner1, denom1, newOwner2, denom2, fee) {
+        newOwner1, denom1, newOwner2, denom2, fee, type) {
         // first input
         this.blkNum1 = blkNum1;
         this.txIndex1 = txIndex1;
@@ -29,6 +29,7 @@ class Transaction {
         this.denom2 = denom2;
 
         this.fee = fee;
+        this.type = type;
     }
 
     encode(includingSig) {
@@ -54,14 +55,6 @@ class Transaction {
             this.sig2 = sig;
         }
     }
-
-    isDeposit() {
-        return this.blkNum1 == 0 && this.blkNum2 == 0;
-    }
-
-    isWithdrawal() {
-        return this.newOwner1 == 0 && this.newOwner2 == 0;
-    }
 }
 
 class UTXO {
@@ -74,6 +67,13 @@ class UTXO {
     }
 }
 
+var TxType = {
+    NORMAL: 0,
+    DEPOSIT: 1,
+    WITHDRAW: 2,
+    MERGE: 3
+};
+
 var txPool = [];
 var utxo = [];
 
@@ -81,8 +81,10 @@ var createDepositTransactions = async (blockNumber, txs, deposits) => {
     for (var i = 0; i < deposits.length; i++) {
         var owner = deposits[i].from;
         var amount = parseInt(deposits[i].amount);
-        var tx = new Transaction(0, 0, 0, 0, 0, 0, 0, 0, owner, amount, 0, 0, 0);
+        var tx = new Transaction(0, 0, 0, 0, 0, 0, 0, 0,
+            owner, amount, 0, 0, 0, TxType.DEPOSIT);
         await updateUTXO(blockNumber, tx, txs);
+        await createMergeTransactions(blockNumber, txs, tx.newOwner1);
     }
 };
 
@@ -91,8 +93,23 @@ var createWithdrawalTransactions = async (blockNumber, txs, withdrawals) => {
         var blkNum = parseInt(withdrawals[i].exitBlockNumber);
         var txIndex = parseInt(withdrawals[i].exitTxIndex);
         var oIndex = parseInt(withdrawals[i].exitOIndex);
-        var tx = new Transaction(blkNum, txIndex, oIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        var tx = new Transaction(blkNum, txIndex, oIndex, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, TxType.WITHDRAW);
         await updateUTXO(blockNumber, tx, txs);
+    }
+};
+
+var createMergeTransactions = async (blockNumber, txs, owner) => {
+    var result = getUTXOsByAddress(owner);
+    while (result.index1 != -1 && result.index2 != -1) {
+        var utxoA = utxo[result.index1];
+        var utxoB = utxo[result.index2];
+        var tx = new Transaction(
+            utxoA.blkNum, utxoA.txIndex, utxoA.oIndex, 0,
+            utxoB.blkNum, utxoB.txIndex, utxoB.oIndex, 0,
+            owner, utxoA.denom + utxoB.denom, 0, 0, 0, TxType.MERGE);
+        await updateUTXO(blockNumber, tx, txs);
+        result = getUTXOsByAddress(owner);
     }
 };
 
@@ -121,7 +138,7 @@ var createTransaction = async (data) => {
     var tx = new Transaction(
         blkNum1, txIndex1, oIndex1, 0,
         blkNum2, txIndex2, oIndex2, 0,
-        newOwner1, denom1, newOwner2, denom2, fee);
+        newOwner1, denom1, newOwner2, denom2, fee, TxType.NORMAL);
     var signature = await geth.signTransaction(tx.toString(false), data.from);
     tx.setSignature(signature);
 
@@ -140,6 +157,26 @@ var getUTXODenom = (blkNum, txIndex, oIndex) => {
     return 0;
 };
 
+var getUTXOsByAddress = (owner) => {
+    var index1 = -1;
+    var index2 = -1;
+    for (var i = 0; i < utxo.length; i++) {
+        if (utxo[i].owner === owner) {
+            if (index1 === -1) {
+                index1 = i;
+            } else if (index2 === -1) {
+                index2 = i;
+            } else {
+                break;
+            }
+        }
+    }
+    return {
+        index1: index1,
+        index2: index2
+    };
+};
+
 var getUTXOByIndex = (blkNum, txIndex, oIndex) => {
     for (var i = 0; i < utxo.length; i++) {
         if (utxo[i].blkNum === blkNum &&
@@ -152,7 +189,7 @@ var getUTXOByIndex = (blkNum, txIndex, oIndex) => {
 };
 
 var isValidTransaction = async (tx) => {
-    if (tx.isDeposit() || tx.isWithdrawal()) {
+    if (tx.type != TxType.NORMAL) {
         return true;
     }
 
@@ -220,6 +257,8 @@ var collectTransactions = async (blockNumber, deposits, withdrawals) => {
     for (var i = 0; i < txPool.length; i++) {
         var tx = txPool[i];
         await updateUTXO(blockNumber, tx, txs);
+        await createMergeTransactions(blockNumber, txs, tx.newOwner1);
+        await createMergeTransactions(blockNumber, txs, tx.newOwner2);
 
         // Limit transactions per block to power of 2 on purpose for the
         // convenience of building Merkle tree.
