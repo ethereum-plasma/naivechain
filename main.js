@@ -24,9 +24,13 @@ var initHttpServer = () => {
 
     // Transaction related
     app.post('/transact', async (req, res) => {
-        var rawTx = await tx.createTransaction(req.body);
-        console.log('New transaction created: ' + JSON.stringify(rawTx));
-        res.send(rawTx.toString(true));
+        try {
+            var rawTx = await tx.createTransaction(req.body);
+            console.log('New transaction created: ' + JSON.stringify(rawTx));
+            res.send(rawTx.toString(true));
+        } catch (e) {
+            res.send(e);
+        }
     });
 
     // Deposit related
