@@ -93,18 +93,12 @@ Create a transaction to other participants. User could specify at most two UTXOs
 ##### Parameter
 |Name|Type|Required|Description|
 |---|---|---|---|
-|blkNum1|Integer|Yes|First UTXO position|
-|txIndex1|Integer|Yes|First UTXO position|
-|oIndex1|Integer|Yes|First UTXO position|
-|blkNum2|Integer|No|Second UTXO position|
-|txIndex2|Integer|No|Second UTXO position|
-|oIndex2|Integer|No|Second UTXO position|
-|newOwner|Address|Yes|Transfer funds to whom|
-|amount|Decimal|Yes|How much ether (in ether)|
 |from|Address|Yes|Transfer funds from whom|
+|to|Address|Yes|Transfer funds to whom|
+|amount|Decimal|Yes|How much ether (in ether)|
 ##### Sample
 ```
-curl -H "Content-type:application/json" --data '{"from": "0xC973531975B1EE371164DCcB9529b89A7bCD1c4A", "blkNum1": 4, "txIndex1": 1, "oIndex": 0, "newOwner": "0x52A6d6c37648Fb1bCd3c641DF3DB35F12a87C4fc", "amount": 0.05}' http://localhost:3001/transact
+curl -H "Content-type:application/json" --data '{"from": "0x6C7f749d0E21aA6478aF8e7Adc362a8bF76Be826", "to": "0x3B0bA3134Ac12Cc065d4dBa498a60cba5Ef16098", "amount": 2}' http://localhost:3001/transact
 ```
 
 ### Deposit related
@@ -117,7 +111,7 @@ Deposit funds to Plasma smart contract.
 |amount|Integer|Yes|How much funds to deposit|
 ##### Sample
 ```
-curl -H "Content-type:application/json" --data '{"address": "0xC973531975B1EE371164DCcB9529b89A7bCD1c4A", "amount": 0.2}' http://localhost:3001/deposit
+curl -H "Content-type:application/json" --data '{"address": "0x6C7f749d0E21aA6478aF8e7Adc362a8bF76Be826", "amount": 4}' http://localhost:3001/deposit
 ```
 
 ### Withdrawal related
@@ -132,7 +126,7 @@ Create a new withdrawal.
 |from|Address|Yes|The owner of the UTXO|
 ##### Sample
 ```
-curl -H "Content-type:application/json" --data '{"blkNum": 3, "txIndex": 1, "oIndex": 0, "from": "0xC973531975B1EE371164DCcB9529b89A7bCD1c4A"}' http://localhost:3001/withdraw/create
+curl -H "Content-type:application/json" --data '{"blkNum": 3, "txIndex": 1, "oIndex": 0, "from": "0x6C7f749d0E21aA6478aF8e7Adc362a8bF76Be826"}' http://localhost:3001/withdraw/create
 ```
 #### Challenge withdrawal
 Create a withdrawal challenge.
@@ -145,7 +139,7 @@ Create a withdrawal challenge.
 |oIndex|Integer|Yes|The position of the UTXO user wants to challenge|
 |from|Address|Yes|The owner of the UTXO|
 ```
-curl -H "Content-type:application/json" --data '{"withdrawalId": 4000000000, "blkNum": 4, "txIndex": 2, "oIndex": 1, "from": "0xC973531975B1EE371164DCcB9529b89A7bCD1c4A"}' http://localhost:3001/withdraw/challenge
+curl -H "Content-type:application/json" --data '{"withdrawalId": 4000000000, "blkNum": 4, "txIndex": 2, "oIndex": 1, "from": "0x6C7f749d0E21aA6478aF8e7Adc362a8bF76Be826"}' http://localhost:3001/withdraw/challenge
 ```
 #### Finalize withdrawal
 Finalize withdrawals manually.
@@ -155,5 +149,5 @@ Finalize withdrawals manually.
 |from|Address|Yes|Who initiates the withdrawal finalization|
 ##### Sample
 ```
-curl -H "Content-type:application/json" --data '{"from": "0xC973531975B1EE371164DCcB9529b89A7bCD1c4A"}' http://localhost:3001/withdraw/finalize
+curl -H "Content-type:application/json" --data '{"from": "0x6C7f749d0E21aA6478aF8e7Adc362a8bF76Be826"}' http://localhost:3001/withdraw/finalize
 ```
