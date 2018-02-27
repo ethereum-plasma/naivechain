@@ -51,7 +51,7 @@ class Transaction {
 
     setSignature(sig) {
         this.sig1 = sig;
-        if (this.blkNum2 != 0) {
+        if (this.blkNum2 !== 0) {
             this.sig2 = sig;
         }
     }
@@ -101,7 +101,7 @@ var createWithdrawalTransactions = async (blockNumber, txs, withdrawals) => {
 
 var createMergeTransactions = async (blockNumber, txs, owner) => {
     var indexes = getTwoUTXOsByAddress(owner);
-    while (indexes[0] != -1 && indexes[1] != -1) {
+    while (indexes[0] !== -1 && indexes[1] !== -1) {
         var utxoA = utxo[indexes[0]];
         var utxoB = utxo[indexes[1]];
         var tx = new Transaction(
@@ -153,7 +153,7 @@ var getUTXOByAddress = (owner, start = 0) => {
 
 var getTwoUTXOsByAddress = (owner) => {
     var index1 = getUTXOByAddress(owner);
-    var index2 = index1 != -1 ? getUTXOByAddress(owner, index1 + 1) : -1;
+    var index2 = index1 !== -1 ? getUTXOByAddress(owner, index1 + 1) : -1;
     return [index1, index2];
 };
 
@@ -169,25 +169,25 @@ var getUTXOByIndex = (blkNum, txIndex, oIndex) => {
 };
 
 var isValidTransaction = async (tx) => {
-    if (tx.type != TxType.NORMAL) {
+    if (tx.type !== TxType.NORMAL) {
         return true;
     }
 
     var denom = 0;
-    if (tx.blkNum1 != 0) {
+    if (tx.blkNum1 !== 0) {
         var message = tx.toString(false);
         var index = getUTXOByIndex(tx.blkNum1, tx.txIndex1, tx.oIndex1);
-        if (index != -1 &&
+        if (index !== -1 &&
             await geth.isValidSignature(message, tx.sig1, utxo[index].owner)) {
             denom += utxo[index].denom;
         } else {
             return false;
         }
     }
-    if (tx.blkNum2 != 0) {
+    if (tx.blkNum2 !== 0) {
         var message = tx.toString(false);
         var index = getUTXOByIndex(tx.blkNum2, tx.txIndex2, tx.oIndex2);
-        if (index != -1 ||
+        if (index !== -1 ||
             await geth.isValidSignature(message, tx.sig2, utxo[index].owner)) {
             denom += utxo[index].denom;
         } else {
@@ -199,19 +199,19 @@ var isValidTransaction = async (tx) => {
 
 var updateUTXO = async (blockNumber, tx, collectedTxs) => {
     if (await isValidTransaction(tx)) {
-        if (tx.blkNum1 != 0) {
+        if (tx.blkNum1 !== 0) {
             var index = getUTXOByIndex(tx.blkNum1, tx.txIndex1, tx.oIndex1);
             utxo.splice(index, 1);
         }
-        if (tx.blkNum2 != 0) {
+        if (tx.blkNum2 !== 0) {
             var index = getUTXOByIndex(tx.blkNum2, tx.txIndex2, tx.oIndex2);
             utxo.splice(index, 1);
         }
         var txIndex = collectedTxs.length;
-        if (tx.newOwner1 != 0 && tx.denom1 != 0) {
+        if (tx.newOwner1 !== 0 && tx.denom1 !== 0) {
             utxo.push(new UTXO(blockNumber, txIndex, 0, tx.newOwner1, tx.denom1));
         }
-        if (tx.newOwner2 != 0 && tx.denom2 != 0) {
+        if (tx.newOwner2 !== 0 && tx.denom2 !== 0) {
             utxo.push(new UTXO(blockNumber, txIndex, 1, tx.newOwner2, tx.denom2));
         }
         collectedTxs.push(tx.toString(true));
