@@ -100,44 +100,40 @@ var createWithdrawalTransactions = async (blockNumber, txs, withdrawals) => {
 };
 
 var createMergeTransactions = async (blockNumber, txs, owner) => {
-    var result = getUTXOsByAddress(owner);
-    while (result.index1 != -1 && result.index2 != -1) {
-        var utxoA = utxo[result.index1];
-        var utxoB = utxo[result.index2];
+    var indexes = getTwoUTXOsByAddress(owner);
+    while (indexes[0] != -1 && indexes[1] != -1) {
+        var utxoA = utxo[indexes[0]];
+        var utxoB = utxo[indexes[1]];
         var tx = new Transaction(
             utxoA.blkNum, utxoA.txIndex, utxoA.oIndex, 0,
             utxoB.blkNum, utxoB.txIndex, utxoB.oIndex, 0,
             owner, utxoA.denom + utxoB.denom, 0, 0, 0, TxType.MERGE);
         await updateUTXO(blockNumber, tx, txs);
-        result = getUTXOsByAddress(owner);
+        indexes = getTwoUTXOsByAddress(owner);
     }
 };
 
 var createTransaction = async (data) => {
-    // TODO: The transaction creation process should be re-designed.
-    // In the future, user should only have one UTXO and this function should
-    // query for him by his address.
-    var blkNum1 = data.blkNum1;
-    var txIndex1 = data.txIndex1;
-    var oIndex1 = data.oIndex1;
-    var blkNum2 = data.hasOwnProperty('blkNum2') ? data.blkNum2 : 0;
-    var txIndex2 = data.hasOwnProperty('txIndex2') ? data.txIndex2 : 0;
-    var oIndex2 = data.hasOwnProperty('oIndex2') ? data.oIndex2 : 0;
-
-    var newOwner1 = data.newOwner;
-    var denom1 = utils.etherToWei(data.amount);
-    var fee = utils.etherToWei(0.01);
-    var denom = getUTXODenom(blkNum1, txIndex1, oIndex1);
-    if (blkNum2 != 0) {
-        denom += getUTXODenom(blkNum2, txIndex2, oIndex2);
+    var index = getUTXOByAddress(data.from);
+    if (index === -1) {
+        throw 'No asset found';
     }
-    var remain = denom - denom1 - fee;
+    var blkNum1 = utxo[index].blkNum;
+    var txIndex1 = utxo[index].txIndex;
+    var oIndex1 = utxo[index].oIndex;
+
+    var newOwner1 = data.to;
+    var denom1 = utils.etherToWei(data.amount);
+    var fee = utils.etherToWei(0.01);  // hard-coded fee to 0.01
+    if (utxo[index].denom < denom1 + fee) {
+        throw 'Insufficient funds';
+    }
+    var remain = utxo[index].denom - denom1 - fee;
     var newOwner2 = (remain > 0) ? data.from : 0;
     var denom2 = remain;
 
     var tx = new Transaction(
-        blkNum1, txIndex1, oIndex1, 0,
-        blkNum2, txIndex2, oIndex2, 0,
+        blkNum1, txIndex1, oIndex1, 0, 0, 0, 0, 0,
         newOwner1, denom1, newOwner2, denom2, fee, TxType.NORMAL);
     var signature = await geth.signTransaction(tx.toString(false), data.from);
     tx.setSignature(signature);
@@ -146,35 +142,19 @@ var createTransaction = async (data) => {
     return tx;
 }
 
-var getUTXODenom = (blkNum, txIndex, oIndex) => {
-    for (var i = 0; i < utxo.length; i++) {
-        if (utxo[i].blkNum == blkNum &&
-            utxo[i].txIndex == txIndex &&
-            utxo[i].oIndex == oIndex) {
-            return utxo[i].denom;
+var getUTXOByAddress = (owner, start = 0) => {
+    for (var i = start; i < utxo.length; i++) {
+        if (utxo[i].owner === owner) {
+            return i;
         }
     }
-    return 0;
+    return -1;
 };
 
-var getUTXOsByAddress = (owner) => {
-    var index1 = -1;
-    var index2 = -1;
-    for (var i = 0; i < utxo.length; i++) {
-        if (utxo[i].owner === owner) {
-            if (index1 === -1) {
-                index1 = i;
-            } else if (index2 === -1) {
-                index2 = i;
-            } else {
-                break;
-            }
-        }
-    }
-    return {
-        index1: index1,
-        index2: index2
-    };
+var getTwoUTXOsByAddress = (owner) => {
+    var index1 = getUTXOByAddress(owner);
+    var index2 = index1 != -1 ? getUTXOByAddress(owner, index1 + 1) : -1;
+    return [index1, index2];
 };
 
 var getUTXOByIndex = (blkNum, txIndex, oIndex) => {
