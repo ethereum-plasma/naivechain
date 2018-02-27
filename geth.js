@@ -74,7 +74,7 @@ var finalizeWithdrawal = async (from) => {
     var result = await plasmaContract.methods.finalizeWithdrawal().send({
         from: from, gas: 300000
     });
-    if (result.events.WithdrawalCompleteEvent != null) {
+    if (result.events.WithdrawalCompleteEvent !== null) {
         var ev = result.events.WithdrawalCompleteEvent.returnValues;
         console.log(ev);
     }
