@@ -6,8 +6,8 @@ library MinHeapLib {
     }
 
     function add(Heap storage _heap, uint256 value) internal {
+        uint index = _heap.data.length;
         _heap.data.length += 1;
-        uint index = _heap.data.length - 1;
         _heap.data[index] = value;
 
         // Fix the min heap if it is violated.
