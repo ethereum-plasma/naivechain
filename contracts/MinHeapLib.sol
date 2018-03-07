@@ -20,10 +20,12 @@ library MinHeapLib {
     }
 
     function peek(Heap storage _heap) view internal returns (uint256 value) {
+        require(_heap.data.length > 0);
         return _heap.data[0];
     }
 
     function pop(Heap storage _heap) internal returns (uint256 value) {
+        require(_heap.data.length > 0);
         uint256 root = _heap.data[0];
         _heap.data[0] = _heap.data[_heap.data.length - 1];
         _heap.data.length -= 1;
