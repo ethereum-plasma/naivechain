@@ -1,16 +1,16 @@
 'use strict';
 
-var express = require("express");
-var bodyParser = require('body-parser');
+const express = require("express");
+const bodyParser = require('body-parser');
 
-var block = require("./block");
-var tx = require("./transaction");
-var geth = require("./geth");
+const block = require("./block");
+const tx = require("./transaction");
+const geth = require("./geth");
 
-var http_port = process.env.HTTP_PORT || 3001;
+const http_port = process.env.HTTP_PORT || 3001;
 
-var initHttpServer = () => {
-    var app = express();
+const initHttpServer = () => {
+    const app = express();
     app.use(bodyParser.json());
 
     // Block related
@@ -18,14 +18,14 @@ var initHttpServer = () => {
         res.send(JSON.stringify(block.getBlocks().map(b => b.printBlock())));
     });
     app.post('/mineBlock', async (req, res) => {
-        var newBlock = await block.generateNextBlock();
+        const newBlock = await block.generateNextBlock();
         res.send(newBlock.printBlock());
     });
 
     // Transaction related
     app.post('/transact', async (req, res) => {
         try {
-            var rawTx = await tx.createTransaction(req.body);
+            const rawTx = await tx.createTransaction(req.body);
             console.log('New transaction created: ' + JSON.stringify(rawTx));
             res.send(rawTx.toString(true));
         } catch (e) {
@@ -41,14 +41,14 @@ var initHttpServer = () => {
 
     // Withdrawal related
     app.post('/withdraw/create', async (req, res) => {
-        var p = block.getTransactionProofInBlock(req.body.blkNum,
+        const p = block.getTransactionProofInBlock(req.body.blkNum,
             req.body.txIndex);
-        var withdrawalId = await geth.startWithdrawal(req.body.blkNum,
+        const withdrawalId = await geth.startWithdrawal(req.body.blkNum,
             req.body.txIndex, req.body.oIndex, p.tx, p.proof, req.body.from);
         res.send(withdrawalId);
     });
     app.post('/withdraw/challenge', async (req, res) => {
-        var p = block.getTransactionProofInBlock(req.body.blkNum,
+        const p = block.getTransactionProofInBlock(req.body.blkNum,
             req.body.txIndex);
         await geth.challengeWithdrawal(req.body.withdrawalId, req.body.blkNum,
             req.body.txIndex, req.body.oIndex, p.tx, p.proof, req.body.from);

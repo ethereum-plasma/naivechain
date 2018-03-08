@@ -1,6 +1,6 @@
 'use strict';
 
-var createKeccakHash = require('keccak');
+const createKeccakHash = require('keccak');
 
 class Merkle {
     constructor(data) {
@@ -23,10 +23,10 @@ class Merkle {
     }
 
     getProof(index) {
-        var proof = [];
-        for (var i = this.levels.length - 1; i > 0; i--) {
-            var isRightNode = index % 2;
-            var siblingIndex = isRightNode ? (index - 1) : (index + 1);
+        let proof = [];
+        for (let i = this.levels.length - 1; i > 0; i--) {
+            let isRightNode = index % 2;
+            let siblingIndex = isRightNode ? (index - 1) : (index + 1);
             proof.push(new Buffer(isRightNode ? [0x00] : [0x01]));
             proof.push(this.levels[i][siblingIndex]);
             index = Math.floor(index / 2);
@@ -43,10 +43,10 @@ class Merkle {
     }
 
     _getNextLevel() {
-        var nodes = [];
-        for (var i = 0; i < this.levels[0].length - 1; i += 2) {
-            var left = this.levels[0][i];
-            var right = this.levels[0][i + 1];
+        let nodes = [];
+        for (let i = 0; i < this.levels[0].length - 1; i += 2) {
+            let left = this.levels[0][i];
+            let right = this.levels[0][i + 1];
             nodes.push(this._hash(Buffer.concat([left, right])));
         }
         return nodes;
