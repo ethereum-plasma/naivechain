@@ -1,16 +1,16 @@
 'use strict';
 
-var crypto = require('crypto');
+const crypto = require('crypto');
 
-var tx = require("./transaction");
-var geth = require("./geth");
-var utils = require("./utils");
+const tx = require("./transaction");
+const geth = require("./geth");
+const utils = require("./utils");
 
-var Merkle = require("./merkle");
+const Merkle = require("./merkle");
 
 class Block {
     constructor(blockNumber, previousHash, transactions) {
-        var data = [];
+        let data = [];
         transactions.forEach(tx => data.push(tx.toString(true)));
 
         this.blockHeader = new BlockHeader(blockNumber, previousHash, data);
@@ -22,7 +22,7 @@ class Block {
     }
 
     toString() {
-        var txsHex = "";
+        let txsHex = "";
         this.transactions.forEach(tx => txsHex += tx);
         return this.blockHeader.toString(true) + txsHex;
     }
@@ -56,10 +56,10 @@ class BlockHeader {
     }
 
     setSignature(signature) {
-        var sig = utils.removeHexPrefix(signature);
-        var sigR = sig.substring(0, 64);
-        var sigS = sig.substring(64, 128);
-        var sigV = parseInt(sig.substring(128, 130), 16);
+        let sig = utils.removeHexPrefix(signature);
+        let sigR = sig.substring(0, 64);
+        let sigS = sig.substring(64, 128);
+        let sigV = parseInt(sig.substring(128, 130), 16);
         if (sigV < 27) {
             sigV += 27;
         }
@@ -69,8 +69,8 @@ class BlockHeader {
     }
 
     toString(includingSig) {
-        var blkNumHexString = this.blockNumber.toString(16).padStart(64, "0");
-        var rawBlockHeader = blkNumHexString + this.previousHash + this.merkleRoot;
+        let blkNumHexString = this.blockNumber.toString(16).padStart(64, "0");
+        let rawBlockHeader = blkNumHexString + this.previousHash + this.merkleRoot;
         if (includingSig) {
             rawBlockHeader += this.sigR + this.sigS + this.sigV;
         }
@@ -78,27 +78,27 @@ class BlockHeader {
     }
 }
 
-var getGenesisBlock = () => {
+const getGenesisBlock = () => {
     // Create a hard coded genesis block.
     return new Block(0, '46182d20ccd7006058f3e801a1ff3de78b740b557bba686ced70f8e3d8a009a6', []);
 };
 
-var blockchain = [getGenesisBlock()];
+let blockchain = [getGenesisBlock()];
 
-var generateNextBlock = async () => {
-    var previousBlock = getLatestBlock();
-    var previousHash = previousBlock.hash;
-    var nextIndex = previousBlock.blockHeader.blockNumber + 1;
+const generateNextBlock = async () => {
+    let previousBlock = getLatestBlock();
+    let previousHash = previousBlock.hash;
+    let nextIndex = previousBlock.blockHeader.blockNumber + 1;
 
     // Query contract past event for deposits / withdrawals and collect transactions.
-    var deposits = await geth.getDeposits(nextIndex - 1);
-    var withdrawals = await geth.getWithdrawals(nextIndex - 1);
-    var transactions = await tx.collectTransactions(nextIndex, deposits, withdrawals);
-    var newBlock = new Block(nextIndex, previousHash, transactions);
+    let deposits = await geth.getDeposits(nextIndex - 1);
+    let withdrawals = await geth.getWithdrawals(nextIndex - 1);
+    let transactions = await tx.collectTransactions(nextIndex, deposits, withdrawals);
+    let newBlock = new Block(nextIndex, previousHash, transactions);
 
     // Operator signs the new block.
-    var messageToSign = utils.addHexPrefix(newBlock.blockHeader.toString(false));
-    var signature = await geth.signBlock(messageToSign);
+    let messageToSign = utils.addHexPrefix(newBlock.blockHeader.toString(false));
+    let signature = await geth.signBlock(messageToSign);
     newBlock.blockHeader.setSignature(signature);
 
     // Add the new block to blockchain.
@@ -107,16 +107,16 @@ var generateNextBlock = async () => {
     blockchain.push(newBlock);
 
     // Submit the block header to plasma contract.
-    var hexPrefixHeader = utils.addHexPrefix(newBlock.blockHeader.toString(true));
+    let hexPrefixHeader = utils.addHexPrefix(newBlock.blockHeader.toString(true));
     geth.submitBlockHeader(hexPrefixHeader);
 
     return newBlock;
 };
 
-var getTransactionProofInBlock = (blockNumber, txIndex) => {
-    var block = getBlock(blockNumber);
-    var tx = utils.addHexPrefix(block.transactions[txIndex]);
-    var proof = utils.bufferToHex(Buffer.concat(block.blockHeader.merkle.getProof(txIndex)), true);
+const getTransactionProofInBlock = (blockNumber, txIndex) => {
+    let block = getBlock(blockNumber);
+    let tx = utils.addHexPrefix(block.transactions[txIndex]);
+    let proof = utils.bufferToHex(Buffer.concat(block.blockHeader.merkle.getProof(txIndex)), true);
     return {
         root: block.blockHeader.merkleRoot,
         tx: tx,
@@ -124,9 +124,9 @@ var getTransactionProofInBlock = (blockNumber, txIndex) => {
     };
 };
 
-var getLatestBlock = () => blockchain[blockchain.length - 1];
-var getBlocks = () => blockchain;
-var getBlock = (index) => blockchain[index];
+const getLatestBlock = () => blockchain[blockchain.length - 1];
+const getBlocks = () => blockchain;
+const getBlock = (index) => blockchain[index];
 
 module.exports = {getLatestBlock, getBlocks, generateNextBlock,
     getTransactionProofInBlock};
