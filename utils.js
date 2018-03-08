@@ -1,12 +1,12 @@
 'use strict';
 
-var Web3 = require("web3");
+const Web3 = require("web3");
 
-var addHexPrefix = (msg) => {
+const addHexPrefix = (msg) => {
     return '0x' + msg;
 };
 
-var removeHexPrefix = (msg) => {
+const removeHexPrefix = (msg) => {
     if (Web3.utils.isHexStrict(msg)) {
         return msg.slice(2);
     } else {
@@ -14,7 +14,7 @@ var removeHexPrefix = (msg) => {
     }
 };
 
-var bufferToHex = (buf, withPrefix) => {
+const bufferToHex = (buf, withPrefix) => {
     if (withPrefix) {
         return addHexPrefix(buf.toString('hex'));
     } else {
@@ -22,11 +22,11 @@ var bufferToHex = (buf, withPrefix) => {
     }
 };
 
-var weiToEther = (data) => {
+const weiToEther = (data) => {
     return data / 1000000000000000000;
 };
 
-var etherToWei = (data) => {
+const etherToWei = (data) => {
     return data * 1000000000000000000;
 };
 
